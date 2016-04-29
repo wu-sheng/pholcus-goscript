@@ -26,19 +26,19 @@ import (
 )
 
 func init() {
-	ZHILIAN.Register()
+	JOB51.Register()
 }
 
-var ZHILIAN = &Spider{
-	Name:        "zhaopin",
-	Description: "智联招聘职务  [http://sou.zhaopin.com/]",
+var JOB51 = &Spider{
+	Name:        "JOB51",
+	Description: "智联招聘职务  [http://51job.com//]",
 	// Pausetime: 300,
 	// Keyin:   KEYIN,
 	// Limit:        LIMIT,
 	EnableCookie: false,
 	RuleTree: &RuleTree{
 		Root: func(ctx *Context) {
-			ctx.Aid(map[string]interface{}{"loop": [2]int{0, 1}, "Rule": "请求列表"}, "请求列表")
+			ctx.Aid(map[string]interface{}{"loop": [2]int{1, 2}, "Rule": "请求列表"}, "请求列表")
 		},
 
 		Trunk: map[string]*Rule{
@@ -48,38 +48,22 @@ var ZHILIAN = &Spider{
 				    for loop := aid["loop"].([2]int); loop[0] < loop[1]; loop[0]++ {
 
 					ctx.AddQueue(&request.Request{
-						Url:  "http://sou.zhaopin.com/jobs/searchresult.ashx?jl=%E5%8C%97%E4%BA%AC&kw=java%E9%AB%98%E7%BA%A7%E5%B7%A5%E7%A8%8B%E5%B8%88&sm=0&p=" + strconv.Itoa(loop[0]),
+						Url:  "http://search.51job.com/jobsearch/search_result.php?fromJs=1&jobarea=000000%2C00&district=000000&funtype=0000&industrytype=00&issuedate=9&providesalary=99&keyword=%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B%E5%B8%88%28java%29&keywordtype=0&lang=c&stype=2&postchannel=0000&workyear=99&cotype=99&degreefrom=99&jobterm=99&companysize=99&lonlat=0%2C0&radius=-1&ord_field=0&list_type=0&fromType=14&dibiaoid=0&confirmdate=9&curr_page=" + strconv.Itoa(loop[0]),
 						Rule: "请求列表",
 					})
 				    }
 				    return nil
 				},
 
-				ParseFunc: func(ctx *Context) {
-					var curr int
-
-					logs.Log.Informational("页码：" ,curr)
-					logs.Log.Informational("页码：" ,strconv.Itoa(curr+1))
-
-					ctx.AddQueue(&request.Request{
-						Url:  "http://sou.zhaopin.com/jobs/searchresult.ashx?jl=%E5%8C%97%E4%BA%AC&kw=java%E9%AB%98%E7%BA%A7%E5%B7%A5%E7%A8%8B%E5%B8%88&sm=0&p=" + strconv.Itoa(curr+1),
-						Rule: "请求列表",
-						Temp: map[string]interface{}{"p": curr + 1},
-					})
-
-					// 用指定规则解析响应流
-					ctx.Parse("获取列表")
-				},
+				
 			},
 
 			"获取列表": {
 				ParseFunc: func(ctx *Context) {
 					logs.Log.Informational("获取列表log")
 
-					logs.Log.Informational("获取列表GetDom", ctx.GetDom())
-
 					ctx.GetDom().
-						Find(".zwmc").
+						Find(".t1").
 						Each(func(i int, s *goquery.Selection) {
 							url, _ := s.Find("a").Attr("href")
 
@@ -109,16 +93,17 @@ var ZHILIAN = &Spider{
 				ParseFunc: func(ctx *Context) {
 					query := ctx.GetDom()
 
-					domresult := query.Find(".terminalpage-left").First().Find("li")
+					thjob := query.Find(".tHjob").First()
+					tCompany_main_jtag := query.Find(".tCompany_main").First().Find(".jtag").First()
 
-					salary := domresult.First().Find("strong").First().Text()
-					work_position := domresult.Eq(1).Find("strong").First().Text()
-					publish_date := domresult.Eq(2).Find("strong").First().Text()
-					job_type := domresult.Eq(3).Find("strong").First().Text()
-					job_years := domresult.Eq(4).Find("strong").First().Text()
-					education := domresult.Eq(5).Find("strong").First().Text()
-					number := domresult.Eq(6).Find("strong").First().Text()
-					job_category := domresult.Eq(7).Find("strong").First().Text()
+					salary := thjob.Find("strong").First().Text()
+					work_position := thjob.Find(".lname").First().Text()
+					publish_date := tCompany_main_jtag.Find(".sp4").Eq(3).Text()
+					job_type := ""
+					job_years := tCompany_main_jtag.Find(".sp4").Eq(0).Text()
+					education := tCompany_main_jtag.Find(".sp4").Eq(1).Text()
+					number := tCompany_main_jtag.Find(".sp4").Eq(2).Text()
+					job_category := thjob.Find("h1").First().Text()
 
 					// 结果存入Response中转
 					ctx.Output(map[int]interface{}{
